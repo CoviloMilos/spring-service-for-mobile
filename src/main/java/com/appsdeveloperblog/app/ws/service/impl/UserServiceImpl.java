@@ -3,6 +3,8 @@ package com.appsdeveloperblog.app.ws.service.impl;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.transaction.Transactional;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +18,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.appsdeveloperblog.app.ws.exceptions.UserServiceException;
+import com.appsdeveloperblog.app.ws.io.entity.PasswordResetTokenEntity;
 import com.appsdeveloperblog.app.ws.io.entity.UserEntity;
+import com.appsdeveloperblog.app.ws.io.repositories.PasswordResetTokenRepository;
 import com.appsdeveloperblog.app.ws.io.repositories.UserRepository;
 import com.appsdeveloperblog.app.ws.service.UserService;
 import com.appsdeveloperblog.app.ws.shared.dto.AddressDto;
@@ -29,6 +33,9 @@ public class UserServiceImpl implements UserService{
 	
 	@Autowired
 	UserRepository userRepo;
+	
+	@Autowired
+	PasswordResetTokenRepository passwordResetTokenRepo;
 	
 	@Autowired
 	Utils utils;
@@ -112,6 +119,7 @@ public class UserServiceImpl implements UserService{
 		return returnValue;
 	}
 
+	@Transactional
 	@Override
 	public void deleteUser(String id) {
 		UserEntity userEntity = userRepo.findByUserId(id);
@@ -135,6 +143,56 @@ public class UserServiceImpl implements UserService{
 			returnValue.add(userDto);
 		}
 		
+		return returnValue;
+	}
+
+	@Override
+	public boolean requestPasswordReset(String email) {		
+		UserEntity userEntity = userRepo.findByEmail(email);
+		
+		if (userEntity == null) {
+			return false;
+		}
+		
+		String token = utils.generatePasswordResetToken(userEntity.getUserId());
+		
+		PasswordResetTokenEntity passwordResetTokenEntity = new PasswordResetTokenEntity();
+		passwordResetTokenEntity.setToken(token);
+		passwordResetTokenEntity.setUserDetails(userEntity);
+		try {
+			passwordResetTokenRepo.save(passwordResetTokenEntity);
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	@Override
+	public boolean resetPassword(String token, String password) {
+		boolean returnValue = false;
+		
+		if (utils.hasTokenExpired(token)) {
+			return returnValue;
+		}
+		
+		PasswordResetTokenEntity passwordResetTokenEntity = passwordResetTokenRepo.findByToken(token);
+		
+		if (passwordResetTokenEntity == null) {
+			return returnValue;
+		}
+		
+		String encodedPassword = bCryptPasswordEncoder.encode(password);
+		
+		UserEntity userEntity = passwordResetTokenEntity.getUserDetails();
+        userEntity.setEncryptedPassword(encodedPassword);
+        UserEntity savedUserEntity = userRepo.save(userEntity);
+        
+        if (savedUserEntity != null && savedUserEntity.getEncryptedPassword().equalsIgnoreCase(encodedPassword)) {
+        	returnValue = true;
+        }
+        
+        passwordResetTokenRepo.delete(passwordResetTokenEntity);
+        
 		return returnValue;
 	}
 
