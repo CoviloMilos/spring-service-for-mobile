@@ -8,6 +8,7 @@ import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.Link;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,10 +32,11 @@ import com.appsdeveloperblog.app.ws.ui.model.response.OperationStatusModel;
 import com.appsdeveloperblog.app.ws.ui.model.response.RequestOperationName;
 import com.appsdeveloperblog.app.ws.ui.model.response.RequestOperationStatus;
 import com.appsdeveloperblog.app.ws.ui.model.response.UserRest;
-
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
-@RequestMapping("users")
+@RequestMapping("/users")
 public class UserController {
 	
 	@Autowired
@@ -90,11 +92,20 @@ public class UserController {
 	
 	@GetMapping(path="/{userId}/addresses/{addressId}",
 			produces = { MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE })
-	public AddressesRest getUserAddress(@PathVariable String addressId) {
+	public AddressesRest getUserAddress(@PathVariable String userId, @PathVariable String addressId) {
 	
 		AddressDto addressDto = addressesService.getAddress(addressId);
 		
-		return modelMapper.map(addressDto, AddressesRest.class);
+		Link addressLink = linkTo(methodOn(UserController.class).getUserAddress(userId, addressId)).withSelfRel();
+		Link userLink = linkTo(methodOn(UserController.class).getUser(userId)).withRel("user");
+		Link addressesLink = linkTo(UserController.class).slash(userId).slash("addresses").withRel("addresses");
+		
+		AddressesRest addressesRest = modelMapper.map(addressDto, AddressesRest.class);
+		addressesRest.add(addressLink);
+		addressesRest.add(userLink);
+		addressesRest.add(addressesLink);
+		
+		return addressesRest;
 	}
 	
 	@PostMapping(consumes = { MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE },
