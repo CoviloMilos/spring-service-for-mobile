@@ -49,7 +49,7 @@ public class UserServiceImpl implements UserService{
 	@Override
 	public UserDto createUser(UserDto user) {
 		
-		if(userRepo.findByEmail(user.getEmail()) != null) throw new RuntimeException("Record already exists");
+		if(userRepo.findByEmail(user.getEmail()) != null) throw new UserServiceException("Record already exists");
 		
 		for (int i = 0; i < user.getAddresses().size(); i++) {
 			AddressDto address = user.getAddresses().get(i);
@@ -57,8 +57,8 @@ public class UserServiceImpl implements UserService{
 			address.setAddressId(utils.generateAddressId(30));
 			user.getAddresses().set(i, address);
 		}
-
-		UserEntity userEntity = modelMapper.map(user, UserEntity.class);
+		ModelMapper modelMapperTst = new ModelMapper();
+		UserEntity userEntity = modelMapperTst.map(user, UserEntity.class);
 		
 		String publicUserId = utils.generateUserId(30);
 		userEntity.setUserId(publicUserId);
@@ -66,9 +66,7 @@ public class UserServiceImpl implements UserService{
 		
 		UserEntity storedUserDeatils = userRepo.save(userEntity);
 		
-		UserDto returnValue = modelMapper.map(storedUserDeatils, UserDto.class);
-		
-		return returnValue;
+		return modelMapperTst.map(storedUserDeatils, UserDto.class);
 	}
 
 	@Override
@@ -98,9 +96,7 @@ public class UserServiceImpl implements UserService{
 		
 		if (userEntity == null) throw new UsernameNotFoundException("User with ID: " + id + " not found");
 
-		UserDto returnValue = modelMapper.map(userEntity, UserDto.class);
-		
-		return returnValue;
+		return modelMapper.map(userEntity, UserDto.class);
 	}
 
 	@Override

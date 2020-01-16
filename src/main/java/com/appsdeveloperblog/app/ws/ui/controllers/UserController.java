@@ -40,16 +40,21 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RestController
 @RequestMapping("/users")
 public class UserController {
+
+	private UserService userService;
+
+	private AddressService addressesService;
+
+	private ModelMapper modelMapper;
 	
-	@Autowired
-	UserService userService;
 	
-	@Autowired
-	AddressService addressesService;
 	
-	@Autowired
-	ModelMapper modelMapper;
-	
+	public UserController(UserService userService, AddressService addressesService, ModelMapper modelMapper) {
+		this.userService = userService;
+		this.addressesService = addressesService;
+		this.modelMapper = modelMapper;
+	}
+
 	@GetMapping(produces = { MediaType.APPLICATION_XML_VALUE, MediaType.APPLICATION_JSON_VALUE })
 	public List<UserRest> getUsers(@RequestParam(value="page", defaultValue="0") int page,
 								   @RequestParam(value="limit", defaultValue="2") int limit) {
